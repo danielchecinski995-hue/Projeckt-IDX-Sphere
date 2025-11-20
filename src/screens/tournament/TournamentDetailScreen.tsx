@@ -30,27 +30,27 @@ export default function TournamentDetailScreen() {
   const { tournamentId, shareCode } = route.params;
   const [activeTab, setActiveTab] = useState<TabType>('matches');
 
+  // Load tournament info first
   const { data: tournament, isLoading: tournamentLoading } = useQuery({
     queryKey: ['tournament', shareCode],
     queryFn: () => tournamentApi.getTournamentByShareCode(shareCode),
   });
 
+  // Prefetch all data in parallel for instant tab switching
+  // All queries will be cached and reused when switching tabs
   const { data: matches, isLoading: matchesLoading } = useQuery({
     queryKey: ['matches', tournamentId],
     queryFn: () => tournamentApi.getTournamentMatches(tournamentId),
-    enabled: activeTab === 'matches',
   });
 
   const { data: standings, isLoading: standingsLoading } = useQuery({
     queryKey: ['standings', tournamentId],
     queryFn: () => tournamentApi.getTournamentStandings(tournamentId),
-    enabled: activeTab === 'standings',
   });
 
   const { data: teams, isLoading: teamsLoading } = useQuery({
     queryKey: ['teams', tournamentId],
     queryFn: () => tournamentApi.getTournamentTeams(tournamentId),
-    enabled: activeTab === 'teams',
   });
 
   if (tournamentLoading) {
@@ -131,7 +131,10 @@ export default function TournamentDetailScreen() {
   };
 
   const renderTeamItem = ({ item }: { item: any }) => (
-    <View style={styles.teamCard}>
+    <TouchableOpacity
+      style={styles.teamCard}
+      onPress={() => navigation.navigate('TeamDetail', { teamId: item.id, teamName: item.name })}
+    >
       <View style={styles.teamCardContent}>
         {item.logo_url && (
           <Image
@@ -142,7 +145,7 @@ export default function TournamentDetailScreen() {
         )}
         <Text style={styles.teamName}>{item.name}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (

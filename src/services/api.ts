@@ -1,16 +1,17 @@
 import axios from 'axios';
-import { Tournament, Match, Standing, Team } from '../types';
+import { Tournament, Match, Standing, Team, TeamWithPlayers, MatchStatistics } from '../types';
 
-// API base URL - using computer's IP address (not localhost!)
-// Change this to your computer's IP address when testing on real device
+// API base URL - using local network IP for Expo Go
+// When using Expo Go, phone must be on same WiFi as computer
 const API_URL = 'http://192.168.1.72:3000/api';
 
-// Create axios instance
+// Create axios instance with timeout for localtunnel
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 10000, // 10 seconds - localtunnel can be slower
   headers: {
     'Content-Type': 'application/json',
+    'Bypass-Tunnel-Reminder': 'true', // Localtunnel bypass header
   },
 });
 
@@ -48,6 +49,14 @@ export const tournamentApi = {
     const response = await api.get(`/tournaments/${tournamentId}/standings`);
     return response.data.data || response.data;
   },
+
+  // Get team with players
+  getTeamWithPlayers: async (teamId: string): Promise<TeamWithPlayers> => {
+    const response = await api.get(`/teams/${teamId}`, {
+      params: { include_players: true },
+    });
+    return response.data.data || response.data;
+  },
 };
 
 // Match API
@@ -55,6 +64,55 @@ export const matchApi = {
   // Get match details
   getMatch: async (matchId: string): Promise<Match> => {
     const response = await api.get(`/matches/${matchId}`);
+    return response.data.data || response.data;
+  },
+
+  // Get both teams' rosters for referee mode
+  getMatchTeams: async (matchId: string) => {
+    const response = await api.get(`/matches/${matchId}/teams`);
+    return response.data.data || response.data;
+  },
+
+  // Update match result with goal scorer
+  updateMatchResult: async (matchId: string, homeScore: number, awayScore: number, goalScorers?: any[]) => {
+    const response = await api.put(`/matches/${matchId}/result`, {
+      homeScore,
+      awayScore,
+      goalScorers,
+    });
+    return response.data.data || response.data;
+  },
+
+  // Get goal scorers for a match
+  getGoalScorers: async (matchId: string) => {
+    const response = await api.get(`/matches/${matchId}/goal-scorers`);
+    return response.data.data || response.data;
+  },
+
+  // Add a goal scorer (regular or own goal)
+  addGoalScorer: async (matchId: string, playerId: string, teamId: string, isOwnGoal: boolean = false) => {
+    const response = await api.post(`/matches/${matchId}/goal-scorers`, {
+      player_id: playerId,
+      team_id: teamId,
+      is_own_goal: isOwnGoal,
+    });
+    return response.data.data || response.data;
+  },
+
+  // Get cards for a match
+  getMatchCards: async (matchId: string) => {
+    const response = await api.get(`/matches/${matchId}/cards`);
+    return response.data.data || response.data;
+  },
+
+  // Add a card to a match
+  addCard: async (matchId: string, playerId: string, teamId: string, cardType: 'yellow' | 'red', minute?: number) => {
+    const response = await api.post(`/matches/${matchId}/cards`, {
+      player_id: playerId,
+      team_id: teamId,
+      card_type: cardType,
+      minute,
+    });
     return response.data.data || response.data;
   },
 };

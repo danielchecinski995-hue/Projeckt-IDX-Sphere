@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
@@ -11,22 +12,45 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { matchApi } from '../../services/api';
+import RefereeMode from '../../components/RefereeMode';
 
 type MatchDetailRouteProp = RouteProp<RootStackParamList, 'MatchDetail'>;
 
 export default function MatchDetailScreen() {
   const route = useRoute<MatchDetailRouteProp>();
   const { matchId } = route.params;
+  const [refereeModeVisible, setRefereeModeVisible] = useState(false);
 
-  const { data: match, isLoading } = useQuery({
+  console.log('MatchDetailScreen - matchId:', matchId);
+
+  const { data: match, isLoading, error } = useQuery({
     queryKey: ['match', matchId],
-    queryFn: () => matchApi.getMatch(matchId),
+    queryFn: async () => {
+      try {
+        console.log('Fetching match:', matchId);
+        const result = await matchApi.getMatch(matchId);
+        console.log('Match fetched:', result);
+        return result;
+      } catch (err) {
+        console.error('Error fetching match:', err);
+        throw err;
+      }
+    },
   });
 
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Błąd ładowania meczu</Text>
+        <Text style={styles.errorText}>{String(error)}</Text>
       </View>
     );
   }
@@ -98,6 +122,18 @@ export default function MatchDetailScreen() {
         </View>
       </View>
 
+      {/* Referee Mode Button - Always visible */}
+      <View style={styles.refereeButtonContainer}>
+        <TouchableOpacity
+          style={styles.refereeButton}
+          onPress={() => setRefereeModeVisible(true)}
+        >
+          <Text style={styles.refereeButtonIcon}>⚽</Text>
+          <Text style={styles.refereeButtonText}>Tryb Sędziowski</Text>
+          <Text style={styles.refereeButtonSubtext}>Szybka aktualizacja wyniku</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Match Info */}
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>Informacje o meczu</Text>
@@ -123,20 +159,130 @@ export default function MatchDetailScreen() {
       </View>
 
       {/* Statistics */}
-      {match.status === 'completed' && (
+      {match.status === 'completed' && (match as any).statistics && (
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Statystyki</Text>
+          <Text style={styles.sectionTitle}>Statystyki meczu</Text>
 
-          <View style={styles.statRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Gole gospodarzy</Text>
-              <Text style={styles.statValue}>{match.homeScore || 0}</Text>
+          {/* Possession */}
+          {(match as any).statistics.home_possession !== undefined && (
+            <View style={styles.statContainer}>
+              <Text style={styles.statName}>Posiadanie piłki</Text>
+              <View style={styles.statBarContainer}>
+                <Text style={styles.statNumber}>
+                  {(match as any).statistics.home_possession}%
+                </Text>
+                <View style={styles.statBar}>
+                  <View
+                    style={[
+                      styles.statBarFill,
+                      styles.statBarHome,
+                      { width: `${(match as any).statistics.home_possession}%` },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.statBarFill,
+                      styles.statBarAway,
+                      { width: `${(match as any).statistics.away_possession}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.statNumber}>
+                  {(match as any).statistics.away_possession}%
+                </Text>
+              </View>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Gole gości</Text>
-              <Text style={styles.statValue}>{match.awayScore || 0}</Text>
+          )}
+
+          {/* Shots */}
+          {(match as any).statistics.home_shots !== undefined && (
+            <View style={styles.statContainer}>
+              <Text style={styles.statName}>Strzały</Text>
+              <View style={styles.statNumbers}>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.home_shots}
+                </Text>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.away_shots}
+                </Text>
+              </View>
             </View>
-          </View>
+          )}
+
+          {/* Shots on Target */}
+          {(match as any).statistics.home_shots_on_target !== undefined && (
+            <View style={styles.statContainer}>
+              <Text style={styles.statName}>Strzały celne</Text>
+              <View style={styles.statNumbers}>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.home_shots_on_target}
+                </Text>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.away_shots_on_target}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Corners */}
+          {(match as any).statistics.home_corners !== undefined && (
+            <View style={styles.statContainer}>
+              <Text style={styles.statName}>Rzuty rożne</Text>
+              <View style={styles.statNumbers}>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.home_corners}
+                </Text>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.away_corners}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Fouls */}
+          {(match as any).statistics.home_fouls !== undefined && (
+            <View style={styles.statContainer}>
+              <Text style={styles.statName}>Faule</Text>
+              <View style={styles.statNumbers}>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.home_fouls}
+                </Text>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.away_fouls}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Offsides */}
+          {(match as any).statistics.home_offsides !== undefined && (
+            <View style={styles.statContainer}>
+              <Text style={styles.statName}>Spalone</Text>
+              <View style={styles.statNumbers}>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.home_offsides}
+                </Text>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.away_offsides}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Big Chances Missed */}
+          {(match as any).statistics.home_big_chances_missed !== undefined && (
+            <View style={styles.statContainer}>
+              <Text style={styles.statName}>Niewykorzystane okazje</Text>
+              <View style={styles.statNumbers}>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.home_big_chances_missed}
+                </Text>
+                <Text style={styles.statNumberValue}>
+                  {(match as any).statistics.away_big_chances_missed}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {match.homeScore !== null && match.awayScore !== null && (
             <View style={styles.resultCard}>
@@ -150,6 +296,15 @@ export default function MatchDetailScreen() {
             </View>
           )}
         </View>
+      )}
+
+      {/* Referee Mode Modal */}
+      {match && (
+        <RefereeMode
+          visible={refereeModeVisible}
+          onClose={() => setRefereeModeVisible(false)}
+          match={match}
+        />
       )}
     </ScrollView>
   );
@@ -290,6 +445,55 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 24,
   },
+  statContainer: {
+    marginBottom: 20,
+  },
+  statName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  statBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statNumber: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  statBar: {
+    flex: 1,
+    height: 24,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    overflow: 'hidden',
+    flexDirection: 'row',
+  },
+  statBarFill: {
+    height: '100%',
+  },
+  statBarHome: {
+    backgroundColor: '#2563eb',
+  },
+  statBarAway: {
+    backgroundColor: '#ef4444',
+  },
+  statNumbers: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 40,
+  },
+  statNumberValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -319,5 +523,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#2563eb',
+  },
+  refereeButtonContainer: {
+    padding: 16,
+  },
+  refereeButton: {
+    backgroundColor: '#10b981',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  refereeButtonIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  refereeButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  refereeButtonSubtext: {
+    fontSize: 14,
+    color: '#d1fae5',
   },
 });

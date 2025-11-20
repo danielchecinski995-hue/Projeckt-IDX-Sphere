@@ -37,6 +37,12 @@
         "projectId": "75f95283-c731-4f2a-bfc0-86e67ecd12ef"
       }
     },
-    "owner": "danielski"
+    "owner": "danielski",
+    "updates": {
+      "url": "https://u.expo.dev/75f95283-c731-4f2a-bfc0-86e67ecd12ef"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

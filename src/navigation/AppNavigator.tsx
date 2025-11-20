@@ -4,11 +4,13 @@ import { createStackNavigator } from '@react-navigation/stack';
 import SearchScreen from '../screens/search/SearchScreen';
 import TournamentDetailScreen from '../screens/tournament/TournamentDetailScreen';
 import MatchDetailScreen from '../screens/match/MatchDetailScreen';
+import TeamDetailScreen from '../screens/team/TeamDetailScreen';
 
 export type RootStackParamList = {
   Search: undefined;
   TournamentDetail: { tournamentId: string; shareCode: string };
   MatchDetail: { matchId: string };
+  TeamDetail: { teamId: string; teamName: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -42,6 +44,11 @@ export default function AppNavigator() {
           name="MatchDetail"
           component={MatchDetailScreen}
           options={{ title: 'Szczegóły Meczu' }}
+        />
+        <Stack.Screen
+          name="TeamDetail"
+          component={TeamDetailScreen}
+          options={{ title: 'Szczegóły Drużyny' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
