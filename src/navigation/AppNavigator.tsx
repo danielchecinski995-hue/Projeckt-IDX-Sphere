@@ -5,12 +5,14 @@ import SearchScreen from '../screens/search/SearchScreen';
 import TournamentDetailScreen from '../screens/tournament/TournamentDetailScreen';
 import MatchDetailScreen from '../screens/match/MatchDetailScreen';
 import TeamDetailScreen from '../screens/team/TeamDetailScreen';
+import RefereeDashboardScreen from '../screens/referee/RefereeDashboardScreen';
 
 export type RootStackParamList = {
   Search: undefined;
   TournamentDetail: { tournamentId: string; shareCode: string };
   MatchDetail: { matchId: string };
   TeamDetail: { teamId: string; teamName: string };
+  RefereeDashboard: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -49,6 +51,11 @@ export default function AppNavigator() {
           name="TeamDetail"
           component={TeamDetailScreen}
           options={{ title: 'Szczegóły Drużyny' }}
+        />
+        <Stack.Screen
+          name="RefereeDashboard"
+          component={RefereeDashboardScreen}
+          options={{ title: 'Tryb Sędziego' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

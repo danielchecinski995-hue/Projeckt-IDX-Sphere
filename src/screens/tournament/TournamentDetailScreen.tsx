@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,13 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useQuery } from '@tanstack/react-query';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { tournamentApi, matchApi } from '../../services/api';
 import { Match, Standing } from '../../types';
+import TeamLogo from '../../components/TeamLogo';
 
 type TournamentDetailRouteProp = RouteProp<RootStackParamList, 'TournamentDetail'>;
 type TournamentDetailNavigationProp = StackNavigationProp<
@@ -35,6 +35,15 @@ export default function TournamentDetailScreen() {
     queryKey: ['tournament', shareCode],
     queryFn: () => tournamentApi.getTournamentByShareCode(shareCode),
   });
+
+  // Update navigation header title with tournament name
+  useLayoutEffect(() => {
+    if (tournament?.name) {
+      navigation.setOptions({
+        headerTitle: tournament.name,
+      });
+    }
+  }, [navigation, tournament]);
 
   // Prefetch all data in parallel for instant tab switching
   // All queries will be cached and reused when switching tabs
@@ -68,13 +77,7 @@ export default function TournamentDetailScreen() {
     >
       <View style={styles.matchHeader}>
         <View style={styles.matchTeamContainer}>
-          {item.homeTeamLogo && (
-            <Image
-              source={{ uri: item.homeTeamLogo }}
-              style={styles.teamLogo}
-              contentFit="contain"
-            />
-          )}
+          <TeamLogo logoUrl={item.homeTeamLogo} teamName={item.homeTeamName || 'TBD'} size={24} />
           <Text style={styles.matchTeam}>{item.homeTeamName || 'TBD'}</Text>
         </View>
         <View style={styles.matchScore}>
@@ -83,13 +86,7 @@ export default function TournamentDetailScreen() {
           </Text>
         </View>
         <View style={styles.matchTeamContainer}>
-          {item.awayTeamLogo && (
-            <Image
-              source={{ uri: item.awayTeamLogo }}
-              style={styles.teamLogo}
-              contentFit="contain"
-            />
-          )}
+          <TeamLogo logoUrl={item.awayTeamLogo} teamName={item.awayTeamName || 'TBD'} size={24} />
           <Text style={styles.matchTeam}>{item.awayTeamName || 'TBD'}</Text>
         </View>
       </View>
@@ -110,13 +107,7 @@ export default function TournamentDetailScreen() {
       <View style={styles.standingRow}>
         <Text style={styles.standingPosition}>{item.position}</Text>
         <View style={styles.standingTeamContainer}>
-          {item.team_logo_url && (
-            <Image
-              source={{ uri: item.team_logo_url }}
-              style={styles.standingTeamLogo}
-              contentFit="contain"
-            />
-          )}
+          <TeamLogo logoUrl={item.team_logo_url} teamName={item.team_name} size={20} />
           <Text style={styles.standingTeam}>{item.team_name}</Text>
         </View>
         <View style={styles.standingStats}>
@@ -136,13 +127,7 @@ export default function TournamentDetailScreen() {
       onPress={() => navigation.navigate('TeamDetail', { teamId: item.id, teamName: item.name })}
     >
       <View style={styles.teamCardContent}>
-        {item.logo_url && (
-          <Image
-            source={{ uri: item.logo_url }}
-            style={styles.teamCardLogo}
-            contentFit="contain"
-          />
-        )}
+        <TeamLogo logoUrl={item.logo_url} teamName={item.name} size={32} />
         <Text style={styles.teamName}>{item.name}</Text>
       </View>
     </TouchableOpacity>
@@ -150,14 +135,6 @@ export default function TournamentDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Tournament Header */}
-      <View style={styles.header}>
-        <Text style={styles.tournamentTitle}>{tournament?.name}</Text>
-        {tournament?.description && (
-          <Text style={styles.tournamentDescription}>{tournament.description}</Text>
-        )}
-      </View>
-
       {/* Tabs */}
       <View style={styles.tabs}>
         <TouchableOpacity
@@ -350,10 +327,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  teamLogo: {
-    width: 24,
-    height: 24,
-  },
   matchTeam: {
     flex: 1,
     fontSize: 14,
@@ -424,10 +397,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  standingTeamLogo: {
-    width: 20,
-    height: 20,
-  },
   standingTeam: {
     flex: 1,
     fontSize: 14,
@@ -456,10 +425,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  teamCardLogo: {
-    width: 32,
-    height: 32,
   },
   teamName: {
     fontSize: 16,

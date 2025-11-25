@@ -1,48 +1,46 @@
-{
-  "expo": {
-    "name": "Live Sport Sphere",
-    "slug": "live-sport-sphere-mobile",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#2563eb"
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.livesportsphere.mobile"
-    },
-    "android": {
-      "package": "com.livesportsphere.mobile",
-      "versionCode": 1,
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2563eb"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "INTERNET"
-      ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "75f95283-c731-4f2a-bfc0-86e67ecd12ef"
-      }
-    },
-    "owner": "danielski",
-    "updates": {
-      "url": "https://u.expo.dev/75f95283-c731-4f2a-bfc0-86e67ecd12ef"
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    }
-  }
+﻿{
+    "expo":  {
+                 "name":  "Live Sport Sphere",
+                 "slug":  "live-sport-sphere-mobile",
+                 "version":  "1.0.0",
+                 "orientation":  "portrait",
+                 "icon":  "./assets/icon.png",
+                 "userInterfaceStyle":  "light",
+                 "newArchEnabled":  true,
+                 "splash":  {
+                                "image":  "./assets/splash-icon.png",
+                                "resizeMode":  "contain",
+                                "backgroundColor":  "#2563eb"
+                            },
+                 "ios":  {
+                             "supportsTablet":  true,
+                             "bundleIdentifier":  "com.livesportsphere.mobile"
+                         },
+                 "android":  {
+                                 "package":  "com.livesportsphere.mobile",
+                                 "versionCode":  1,
+                                 "adaptiveIcon":  {
+                                                      "foregroundImage":  "./assets/adaptive-icon.png",
+                                                      "backgroundColor":  "#2563eb"
+                                                  },
+                                 "edgeToEdgeEnabled":  true,
+                                 "predictiveBackGestureEnabled":  false,
+                                 "permissions":  [
+                                                     "INTERNET"
+                                                 ]
+                             },
+                 "web":  {
+                             "favicon":  "./assets/favicon.png"
+                         },
+                 "extra":  {
+                               "eas":  {
+                                           "projectId":  "75f95283-c731-4f2a-bfc0-86e67ecd12ef"
+                                       }
+                           },
+                 "owner":  "danielski",
+                 "updates":  {
+                                 "url":  "https://u.expo.dev/75f95283-c731-4f2a-bfc0-86e67ecd12ef"
+                             },
+                 "runtimeVersion": "1.0.0"
+             }
 }

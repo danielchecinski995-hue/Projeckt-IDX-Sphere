@@ -1,25 +1,144 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { matchApi } from '../../services/api';
-import RefereeMode from '../../components/RefereeMode';
+import TeamLogo from '../../components/TeamLogo';
+
+interface Player {
+  id: string;
+  first_name: string;
+  last_name: string;
+  jersey_number?: number;
+  is_starter?: boolean;
+}
+
+interface GoalScorer {
+  player_id: string;
+  goals_count: number;
+  is_own_goal?: boolean;
+}
+
+interface Card {
+  id: string;
+  player_id: string;
+  card_type: 'yellow' | 'red';
+}
 
 type MatchDetailRouteProp = RouteProp<RootStackParamList, 'MatchDetail'>;
+
+// Football Jersey Component
+const JerseyIcon = ({ color, number, size = 40 }: { color: string; number: string; size?: number }) => {
+  const scale = size / 40;
+  const borderColor = color === '#3b82f6' ? '#1e40af' : '#991b1b';
+
+  return (
+    <View style={{ width: size * 1.2, height: size, position: 'relative' }}>
+      {/* Left sleeve */}
+      <View style={{
+        position: 'absolute',
+        top: 4 * scale,
+        left: 0,
+        width: 14 * scale,
+        height: 10 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderTopLeftRadius: 3 * scale,
+        borderBottomLeftRadius: 3 * scale,
+        transform: [{ rotate: '-25deg' }],
+      }} />
+
+      {/* Right sleeve */}
+      <View style={{
+        position: 'absolute',
+        top: 4 * scale,
+        right: 0,
+        width: 14 * scale,
+        height: 10 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderTopRightRadius: 3 * scale,
+        borderBottomRightRadius: 3 * scale,
+        transform: [{ rotate: '25deg' }],
+      }} />
+
+      {/* Main body */}
+      <View style={{
+        position: 'absolute',
+        top: 8 * scale,
+        left: 9 * scale,
+        width: 30 * scale,
+        height: 30 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderTopWidth: 0,
+        borderBottomLeftRadius: 3 * scale,
+        borderBottomRightRadius: 3 * scale,
+      }} />
+
+      {/* Shoulder/neck area */}
+      <View style={{
+        position: 'absolute',
+        top: 2 * scale,
+        left: 12 * scale,
+        width: 24 * scale,
+        height: 12 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderBottomWidth: 0,
+        borderTopLeftRadius: 4 * scale,
+        borderTopRightRadius: 4 * scale,
+      }} />
+
+      {/* Neck hole */}
+      <View style={{
+        position: 'absolute',
+        top: 4 * scale,
+        left: 17 * scale,
+        width: 14 * scale,
+        height: 8 * scale,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 7 * scale,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+      }} />
+
+      {/* Number */}
+      <View style={{
+        position: 'absolute',
+        top: 18 * scale,
+        left: 9 * scale,
+        width: 30 * scale,
+        alignItems: 'center',
+      }}>
+        <Text style={{
+          fontSize: 13 * scale,
+          fontWeight: 'bold',
+          color: '#fff',
+          textAlign: 'center',
+          textShadowColor: borderColor,
+          textShadowOffset: { width: 0.5, height: 0.5 },
+          textShadowRadius: 1,
+        }}>{number}</Text>
+      </View>
+    </View>
+  );
+};
 
 export default function MatchDetailScreen() {
   const route = useRoute<MatchDetailRouteProp>();
   const { matchId } = route.params;
-  const [refereeModeVisible, setRefereeModeVisible] = useState(false);
 
   console.log('MatchDetailScreen - matchId:', matchId);
 
@@ -36,7 +155,101 @@ export default function MatchDetailScreen() {
         throw err;
       }
     },
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
+
+  // Load both teams with players
+  const { data: teamsData } = useQuery({
+    queryKey: ['match-teams', matchId],
+    queryFn: () => matchApi.getMatchTeams(matchId),
+    enabled: !!matchId,
+    refetchInterval: 5000, // Real-time updates
+  });
+
+  // Load goal scorers
+  const { data: goalScorersData } = useQuery({
+    queryKey: ['goal-scorers', matchId],
+    queryFn: () => matchApi.getGoalScorers(matchId),
+    enabled: !!matchId,
+    refetchInterval: 5000, // Real-time updates
+  });
+
+  // Load cards
+  const { data: cardsData } = useQuery({
+    queryKey: ['cards', matchId],
+    queryFn: () => matchApi.getMatchCards(matchId),
+    enabled: !!matchId,
+    refetchInterval: 5000, // Real-time updates
+  });
+
+  const goalScorers: GoalScorer[] = Array.isArray(goalScorersData) ? goalScorersData : [];
+  const cards: Card[] = Array.isArray(cardsData) ? cardsData : [];
+
+  // Get player stats
+  const getPlayerStats = (playerId: string) => {
+    try {
+      const playerGoalScorers = goalScorers.filter(gs => gs?.player_id === playerId);
+      const goals = playerGoalScorers.filter(gs => !gs?.is_own_goal).reduce((sum, gs) => sum + (gs?.goals_count || 0), 0);
+      const ownGoals = playerGoalScorers.filter(gs => gs?.is_own_goal).reduce((sum, gs) => sum + (gs?.goals_count || 0), 0);
+      const playerCards = cards.filter(c => c?.player_id === playerId);
+      const yellowCards = playerCards.filter(c => c?.card_type === 'yellow').length;
+      const redCards = playerCards.filter(c => c?.card_type === 'red').length;
+
+      return { goals, ownGoals, yellowCards, redCards };
+    } catch (error) {
+      console.error('Error calculating player stats:', error);
+      return { goals: 0, ownGoals: 0, yellowCards: 0, redCards: 0 };
+    }
+  };
+
+  const renderPlayer = (player: Player, teamType: 'home' | 'away') => {
+    const stats = getPlayerStats(player.id);
+    const shirtColor = teamType === 'home' ? '#3b82f6' : '#ef4444';
+    const hasStats = stats.goals > 0 || stats.yellowCards > 0 || stats.redCards > 0;
+    const hasGoal = stats.goals > 0;
+
+    return (
+      <View
+        key={player.id}
+        style={[styles.playerCard, hasGoal && styles.playerCardHighlight]}
+      >
+        {/* Stats icons at top right */}
+        {hasStats && (
+          <View style={styles.statsTopRight}>
+            {stats.goals > 0 && (
+              <View style={styles.statBadge}>
+                <Text style={styles.statIcon}>⚽</Text>
+                {stats.goals > 1 && <Text style={styles.statCount}>{stats.goals}</Text>}
+              </View>
+            )}
+            {stats.yellowCards > 0 && (
+              <View style={styles.statBadge}>
+                <Text style={styles.statIcon}>🟨</Text>
+                {stats.yellowCards > 1 && <Text style={styles.statCount}>{stats.yellowCards}</Text>}
+              </View>
+            )}
+            {stats.redCards > 0 && (
+              <View style={styles.statBadge}>
+                <Text style={styles.statIcon}>🟥</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Jersey + Name */}
+        <View style={styles.playerRow}>
+          <JerseyIcon
+            color={shirtColor}
+            number={player.jersey_number?.toString() || '?'}
+            size={36}
+          />
+          <Text style={styles.playerName} numberOfLines={2}>
+            {player.first_name} {player.last_name}
+          </Text>
+        </View>
+      </View>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -86,13 +299,7 @@ export default function MatchDetailScreen() {
       {/* Score Display */}
       <View style={styles.scoreContainer}>
         <View style={styles.teamContainer}>
-          {match.homeTeamLogo && (
-            <Image
-              source={{ uri: match.homeTeamLogo }}
-              style={styles.teamLogo}
-              contentFit="contain"
-            />
-          )}
+          <TeamLogo logoUrl={match.homeTeamLogo} teamName={match.homeTeamName || 'TBD'} size={64} />
           <Text style={styles.teamName}>{match.homeTeamName || 'TBD'}</Text>
         </View>
 
@@ -111,27 +318,9 @@ export default function MatchDetailScreen() {
         </View>
 
         <View style={styles.teamContainer}>
-          {match.awayTeamLogo && (
-            <Image
-              source={{ uri: match.awayTeamLogo }}
-              style={styles.teamLogo}
-              contentFit="contain"
-            />
-          )}
+          <TeamLogo logoUrl={match.awayTeamLogo} teamName={match.awayTeamName || 'TBD'} size={64} />
           <Text style={styles.teamName}>{match.awayTeamName || 'TBD'}</Text>
         </View>
-      </View>
-
-      {/* Referee Mode Button - Always visible */}
-      <View style={styles.refereeButtonContainer}>
-        <TouchableOpacity
-          style={styles.refereeButton}
-          onPress={() => setRefereeModeVisible(true)}
-        >
-          <Text style={styles.refereeButtonIcon}>⚽</Text>
-          <Text style={styles.refereeButtonText}>Tryb Sędziowski</Text>
-          <Text style={styles.refereeButtonSubtext}>Szybka aktualizacja wyniku</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Match Info */}
@@ -157,6 +346,79 @@ export default function MatchDetailScreen() {
           <Text style={styles.infoValue}>{getMatchStatusText(match.status)}</Text>
         </View>
       </View>
+
+      {/* Team Lineups */}
+      {teamsData && (
+        <View style={styles.lineupsSection}>
+          <Text style={styles.sectionTitle}>Składy drużyn</Text>
+
+          <View style={styles.twoColumnContainer}>
+            {/* Left Column - Home Team */}
+            <View style={styles.columnLeft}>
+              <View style={styles.teamHeaderCompact}>
+                <Text style={styles.teamHeaderTextCompact}>{match.homeTeamName}</Text>
+              </View>
+
+              {teamsData.homeTeam?.players && teamsData.homeTeam.players.length > 0 ? (
+                <>
+                  {/* Starters Section */}
+                  <View style={styles.sectionHeaderCompact}>
+                    <Text style={styles.sectionHeaderTextCompact}>Podstawowy skład</Text>
+                  </View>
+                  {teamsData.homeTeam.players
+                    .filter(player => player.is_starter)
+                    .map((player) => renderPlayer(player, 'home'))}
+
+                  {/* Separator */}
+                  <View style={styles.separatorCompact} />
+
+                  {/* Substitutes Section */}
+                  <View style={styles.sectionHeaderCompact}>
+                    <Text style={styles.sectionHeaderTextCompact}>Rezerwowi</Text>
+                  </View>
+                  {teamsData.homeTeam.players
+                    .filter(player => !player.is_starter)
+                    .map((player) => renderPlayer(player, 'home'))}
+                </>
+              ) : (
+                <Text style={styles.emptyText}>Brak zawodników</Text>
+              )}
+            </View>
+
+            {/* Right Column - Away Team */}
+            <View style={styles.columnRight}>
+              <View style={styles.teamHeaderCompact}>
+                <Text style={styles.teamHeaderTextCompact}>{match.awayTeamName}</Text>
+              </View>
+
+              {teamsData.awayTeam?.players && teamsData.awayTeam.players.length > 0 ? (
+                <>
+                  {/* Starters Section */}
+                  <View style={styles.sectionHeaderCompact}>
+                    <Text style={styles.sectionHeaderTextCompact}>Podstawowy skład</Text>
+                  </View>
+                  {teamsData.awayTeam.players
+                    .filter(player => player.is_starter)
+                    .map((player) => renderPlayer(player, 'away'))}
+
+                  {/* Separator */}
+                  <View style={styles.separatorCompact} />
+
+                  {/* Substitutes Section */}
+                  <View style={styles.sectionHeaderCompact}>
+                    <Text style={styles.sectionHeaderTextCompact}>Rezerwowi</Text>
+                  </View>
+                  {teamsData.awayTeam.players
+                    .filter(player => !player.is_starter)
+                    .map((player) => renderPlayer(player, 'away'))}
+                </>
+              ) : (
+                <Text style={styles.emptyText}>Brak zawodników</Text>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Statistics */}
       {match.status === 'completed' && (match as any).statistics && (
@@ -298,14 +560,6 @@ export default function MatchDetailScreen() {
         </View>
       )}
 
-      {/* Referee Mode Modal */}
-      {match && (
-        <RefereeMode
-          visible={refereeModeVisible}
-          onClose={() => setRefereeModeVisible(false)}
-          match={match}
-        />
-      )}
     </ScrollView>
   );
 }
@@ -524,32 +778,108 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2563eb',
   },
-  refereeButtonContainer: {
+  // Lineup Section Styles
+  lineupsSection: {
+    backgroundColor: '#fff',
+    marginTop: 16,
     padding: 16,
   },
-  refereeButton: {
-    backgroundColor: '#10b981',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+  twoColumnContainer: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  refereeButtonIcon: {
-    fontSize: 48,
+  columnLeft: {
+    flex: 1,
+    paddingRight: 4,
+  },
+  columnRight: {
+    flex: 1,
+    paddingLeft: 4,
+  },
+  teamHeaderCompact: {
     marginBottom: 8,
+    alignItems: 'center',
   },
-  refereeButtonText: {
-    fontSize: 20,
+  teamHeaderTextCompact: {
+    fontSize: 13,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
+    color: '#475569',
   },
-  refereeButtonSubtext: {
-    fontSize: 14,
-    color: '#d1fae5',
+  sectionHeaderCompact: {
+    marginTop: 6,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+  sectionHeaderTextCompact: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+  },
+  separatorCompact: {
+    height: 2,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 8,
+    borderRadius: 1,
+  },
+  playerCard: {
+    position: 'relative',
+    backgroundColor: '#f8fafc',
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingHorizontal: 6,
+    marginBottom: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  playerCardHighlight: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#fbbf24',
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  playerName: {
+    flex: 1,
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#334155',
+    marginLeft: 4,
+    lineHeight: 12,
+  },
+  statsTopRight: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    zIndex: 1,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIcon: {
+    fontSize: 11,
+  },
+  statCount: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginLeft: 1,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#94a3b8',
+    marginTop: 16,
+    fontSize: 12,
   },
 });

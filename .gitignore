@@ -39,3 +39,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Android SDK tools
+build-tools/
+platform-tools/
+
+# Build and setup scripts
+*.ps1
+*.txt
+*.md
+!README.md
+!package.json

@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { Tournament, Match, Standing, Team, TeamWithPlayers, MatchStatistics } from '../types';
+import { Tournament, Match, Standing, Team, TeamWithPlayers, MatchStatistics, Substitution } from '../types';
 
 // API base URL - using local network IP for Expo Go
 // When using Expo Go, phone must be on same WiFi as computer
-const API_URL = 'http://192.168.1.72:3000/api';
+const API_URL = 'http://192.168.1.78:3000/api';
 
 // Create axios instance with timeout for localtunnel
 const api = axios.create({
@@ -23,6 +23,12 @@ export const tournamentApi = {
       params: { is_public: true },
     });
     // Backend returns {success, count, data}, we need just data array
+    return response.data.data || response.data;
+  },
+
+  // Get all tournaments (for referee mode)
+  getAllTournaments: async (): Promise<Tournament[]> => {
+    const response = await api.get('/tournaments');
     return response.data.data || response.data;
   },
 
@@ -112,6 +118,31 @@ export const matchApi = {
       team_id: teamId,
       card_type: cardType,
       minute,
+    });
+    return response.data.data || response.data;
+  },
+
+  // Get substitutions for a match
+  getSubstitutions: async (matchId: string): Promise<Substitution[]> => {
+    const response = await api.get(`/matches/${matchId}/substitutions`);
+    return response.data.data || response.data;
+  },
+
+  // Add a substitution
+  addSubstitution: async (matchId: string, teamId: string, playerOutId: string, playerInId: string, minute?: number) => {
+    const response = await api.post(`/matches/${matchId}/substitutions`, {
+      teamId,
+      playerOutId,
+      playerInId,
+      minute,
+    });
+    return response.data.data || response.data;
+  },
+
+  // Update match status (for referee mode)
+  updateMatchStatus: async (matchId: string, status: 'scheduled' | 'live' | 'completed') => {
+    const response = await api.put(`/matches/${matchId}/status`, {
+      status,
     });
     return response.data.data || response.data;
   },

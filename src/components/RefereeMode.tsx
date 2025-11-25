@@ -9,16 +9,18 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { matchApi } from '../services/api';
+import Svg, { Path, Rect } from 'react-native-svg';
+import TeamLogo from './TeamLogo';
 
 interface Player {
   id: string;
   first_name: string;
   last_name: string;
   jersey_number?: number;
+  is_starter?: boolean;
 }
 
 interface TeamData {
@@ -60,13 +62,121 @@ interface ReferenceModeProps {
   match: Match;
 }
 
-type ActionType = 'goal' | 'yellow_card' | 'red_card' | 'own_goal';
+type ActionType = 'goal' | 'yellow_card' | 'red_card' | 'own_goal' | 'substitution';
 
 interface ActionPopup {
   visible: boolean;
   player: Player | null;
   team: 'home' | 'away' | null;
 }
+
+interface SubstitutionModal {
+  visible: boolean;
+  playerOut: Player | null;
+  team: 'home' | 'away' | null;
+}
+
+// Football Jersey Component - T-shirt with sleeves pointing outward
+const JerseyIcon = ({ color, number, size = 40 }: { color: string; number: string; size?: number }) => {
+  const scale = size / 40;
+  const borderColor = color === '#3b82f6' ? '#1e40af' : '#991b1b';
+
+  return (
+    <View style={{ width: size * 1.2, height: size, position: 'relative' }}>
+      {/* Left sleeve - angled outward */}
+      <View style={{
+        position: 'absolute',
+        top: 4 * scale,
+        left: 0,
+        width: 14 * scale,
+        height: 10 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderTopLeftRadius: 3 * scale,
+        borderBottomLeftRadius: 3 * scale,
+        transform: [{ rotate: '-25deg' }],
+      }} />
+
+      {/* Right sleeve - angled outward */}
+      <View style={{
+        position: 'absolute',
+        top: 4 * scale,
+        right: 0,
+        width: 14 * scale,
+        height: 10 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderTopRightRadius: 3 * scale,
+        borderBottomRightRadius: 3 * scale,
+        transform: [{ rotate: '25deg' }],
+      }} />
+
+      {/* Main body */}
+      <View style={{
+        position: 'absolute',
+        top: 8 * scale,
+        left: 9 * scale,
+        width: 30 * scale,
+        height: 30 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderTopWidth: 0,
+        borderBottomLeftRadius: 3 * scale,
+        borderBottomRightRadius: 3 * scale,
+      }} />
+
+      {/* Shoulder/neck area */}
+      <View style={{
+        position: 'absolute',
+        top: 2 * scale,
+        left: 12 * scale,
+        width: 24 * scale,
+        height: 12 * scale,
+        backgroundColor: color,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+        borderBottomWidth: 0,
+        borderTopLeftRadius: 4 * scale,
+        borderTopRightRadius: 4 * scale,
+      }} />
+
+      {/* Neck hole (oval) */}
+      <View style={{
+        position: 'absolute',
+        top: 4 * scale,
+        left: 17 * scale,
+        width: 14 * scale,
+        height: 8 * scale,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 7 * scale,
+        borderWidth: 1.5 * scale,
+        borderColor: borderColor,
+      }} />
+
+      {/* Number */}
+      <View style={{
+        position: 'absolute',
+        top: 18 * scale,
+        left: 9 * scale,
+        width: 30 * scale,
+        alignItems: 'center',
+      }}>
+        <Text style={{
+          fontSize: 13 * scale,
+          fontWeight: 'bold',
+          color: '#fff',
+          textAlign: 'center',
+          textShadowColor: borderColor,
+          textShadowOffset: { width: 0.5, height: 0.5 },
+          textShadowRadius: 1,
+        }}>{number}</Text>
+      </View>
+    </View>
+  );
+};
 
 export default function RefereeMode({ visible, onClose, match }: ReferenceModeProps) {
   const queryClient = useQueryClient();
@@ -75,6 +185,22 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     player: null,
     team: null,
   });
+  const [substitutionModal, setSubstitutionModal] = useState<SubstitutionModal>({
+    visible: false,
+    playerOut: null,
+    team: null,
+  });
+
+  // Load current match data to get updated scores
+  const { data: currentMatch } = useQuery({
+    queryKey: ['match', match.id],
+    queryFn: () => matchApi.getMatch(match.id),
+    enabled: visible,
+    initialData: match,
+  });
+
+  // Use current match data if available, otherwise fall back to prop
+  const matchData = currentMatch || match;
 
   // Load both teams with players
   const { data: teamsData, isLoading: teamsLoading } = useQuery({
@@ -97,7 +223,6 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     enabled: visible,
   });
 
-  // Safely extract arrays from API responses
   const goalScorers: GoalScorer[] = Array.isArray(goalScorersData) ? goalScorersData : [];
   const cards: Card[] = Array.isArray(cardsData) ? cardsData : [];
 
@@ -123,7 +248,6 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     mutationFn: ({ playerId, teamId, isOwnGoal }: any) =>
       matchApi.addGoalScorer(match.id, playerId, teamId, isOwnGoal),
     onSuccess: () => {
-      // Invalidate queries to refresh match data
       queryClient.invalidateQueries({ queryKey: ['match', match.id] });
       if (match.tournamentId) {
         queryClient.invalidateQueries({ queryKey: ['matches', match.tournamentId] });
@@ -150,6 +274,20 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     },
   });
 
+  // Mutation to add substitution
+  const addSubstitution = useMutation({
+    mutationFn: ({ teamId, playerOutId, playerInId }: any) =>
+      matchApi.addSubstitution(match.id, teamId, playerOutId, playerInId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['match-teams', match.id] });
+      queryClient.invalidateQueries({ queryKey: ['substitutions', match.id] });
+    },
+    onError: (error) => {
+      Alert.alert('Błąd', 'Nie udało się dokonać zmiany');
+      console.error('Error adding substitution:', error);
+    },
+  });
+
   const handlePlayerPress = (player: Player, team: 'home' | 'away') => {
     setActionPopup({
       visible: true,
@@ -162,12 +300,21 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     if (!actionPopup.player || !actionPopup.team) return;
 
     const isHomeTeam = actionPopup.team === 'home';
-    const teamId = isHomeTeam ? match.homeTeamId : match.awayTeamId;
+    const teamId = isHomeTeam ? matchData.homeTeamId : matchData.awayTeamId;
 
-    // Close popup first
+    if (action === 'substitution') {
+      // Open substitution modal
+      setSubstitutionModal({
+        visible: true,
+        playerOut: actionPopup.player,
+        team: actionPopup.team,
+      });
+      setActionPopup({ visible: false, player: null, team: null });
+      return;
+    }
+
     setActionPopup({ visible: false, player: null, team: null });
 
-    // Call API based on action
     if (action === 'goal') {
       addGoal.mutate({
         playerId: actionPopup.player.id,
@@ -189,53 +336,66 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     }
   };
 
+  const handleSubstitution = (playerInId: string) => {
+    if (!substitutionModal.playerOut || !substitutionModal.team) return;
+
+    const isHomeTeam = substitutionModal.team === 'home';
+    const teamId = isHomeTeam ? matchData.homeTeamId : matchData.awayTeamId;
+
+    setSubstitutionModal({ visible: false, playerOut: null, team: null });
+
+    addSubstitution.mutate({
+      teamId: teamId,
+      playerOutId: substitutionModal.playerOut.id,
+      playerInId: playerInId,
+    });
+  };
+
   const renderPlayer = (player: Player, teamType: 'home' | 'away') => {
     const stats = getPlayerStats(player.id);
-    const gradientColors = teamType === 'home' ? ['#3b82f6', '#2563eb'] : ['#ef4444', '#dc2626'];
+    const shirtColor = teamType === 'home' ? '#3b82f6' : '#ef4444'; // Blue for home, Red for away
+    const hasStats = stats.goals > 0 || stats.yellowCards > 0 || stats.redCards > 0;
 
     return (
       <TouchableOpacity
         key={player.id}
-        style={styles.playerRow}
+        style={styles.playerCard}
         onPress={() => handlePlayerPress(player, teamType)}
-        disabled={updateResult.isPending || addCard.isPending}
+        disabled={addGoal.isPending || addCard.isPending || addSubstitution.isPending}
       >
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.jerseyNumber}
-        >
-          <Text style={styles.jerseyNumberText}>
-            {player.jersey_number || '?'}
-          </Text>
-        </LinearGradient>
-        <View style={styles.playerInfo}>
-          <Text style={styles.playerName} numberOfLines={1}>
-            {player.first_name} {player.last_name}
-          </Text>
-          <View style={styles.statsRow}>
+        {/* Stats icons at top right - absolute positioned */}
+        {hasStats && (
+          <View style={styles.statsTopRight}>
             {stats.goals > 0 && (
-              <Text style={styles.statIcon}>
-                ⚽{stats.goals > 1 ? `×${stats.goals}` : ''}
-              </Text>
-            )}
-            {stats.ownGoals > 0 && (
-              <Text style={[styles.statIcon, styles.ownGoalIcon]}>
-                ⚽{stats.ownGoals > 1 ? `×${stats.ownGoals}` : ''}
-              </Text>
+              <View style={styles.statBadge}>
+                <Text style={styles.statIcon}>⚽</Text>
+                {stats.goals > 1 && <Text style={styles.statCount}>{stats.goals}</Text>}
+              </View>
             )}
             {stats.yellowCards > 0 && (
-              <Text style={styles.statIcon}>
-                🟨{stats.yellowCards > 1 ? `×${stats.yellowCards}` : ''}
-              </Text>
+              <View style={styles.statBadge}>
+                <Text style={styles.statIcon}>🟨</Text>
+                {stats.yellowCards > 1 && <Text style={styles.statCount}>{stats.yellowCards}</Text>}
+              </View>
             )}
             {stats.redCards > 0 && (
-              <Text style={styles.statIcon}>
-                🟥{stats.redCards > 1 ? `×${stats.redCards}` : ''}
-              </Text>
+              <View style={styles.statBadge}>
+                <Text style={styles.statIcon}>🟥</Text>
+              </View>
             )}
           </View>
+        )}
+
+        {/* Jersey + Name in row, aligned to bottom */}
+        <View style={styles.playerRow}>
+          <JerseyIcon
+            color={shirtColor}
+            number={player.jersey_number?.toString() || '?'}
+            size={36}
+          />
+          <Text style={styles.playerName} numberOfLines={2}>
+            {player.first_name} {player.last_name}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -248,54 +408,31 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
       transparent={false}
       onRequestClose={onClose}
     >
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.container}
-      >
-        {/* Header with back button */}
+      <View style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Wróć</Text>
+            <Text style={styles.backText}>← Wróć</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>⚽ Tryb Sędziowski</Text>
           <View style={{ width: 60 }} />
         </View>
 
-        {/* Score and Team Logos */}
-        <View style={styles.scoreHeader}>
-          <View style={styles.teamScoreContainer}>
-            {teamsData?.homeTeam?.logo && (
-              <Image
-                source={{ uri: teamsData.homeTeam.logo }}
-                style={styles.teamLogo}
-                contentFit="contain"
-              />
-            )}
-            <Text style={styles.teamScoreName} numberOfLines={1}>
-              {match.homeTeamName}
-            </Text>
+        {/* Score Header */}
+        <View style={styles.scoreSection}>
+          <View style={styles.teamSection}>
+            <TeamLogo logoUrl={matchData.homeTeamLogo} teamName={matchData.homeTeamName} size={40} />
+            <Text style={styles.teamName}>{matchData.homeTeamName}</Text>
           </View>
-
-          <View style={styles.scoreBox}>
-            <Text style={styles.scoreText}>
-              {match.homeScore ?? 0} : {match.awayScore ?? 0}
+          <View style={styles.scoreboard}>
+            <Text style={styles.score}>
+              {matchData.homeScore ?? 0} : {matchData.awayScore ?? 0}
             </Text>
             <Text style={styles.scoreLabel}>Aktualny wynik</Text>
           </View>
-
-          <View style={styles.teamScoreContainer}>
-            {teamsData?.awayTeam?.logo && (
-              <Image
-                source={{ uri: teamsData.awayTeam.logo }}
-                style={styles.teamLogo}
-                contentFit="contain"
-              />
-            )}
-            <Text style={styles.teamScoreName} numberOfLines={1}>
-              {match.awayTeamName}
-            </Text>
+          <View style={styles.teamSection}>
+            <TeamLogo logoUrl={matchData.awayTeamLogo} teamName={matchData.awayTeamName} size={40} />
+            <Text style={styles.teamName}>{matchData.awayTeamName}</Text>
           </View>
         </View>
 
@@ -304,42 +441,82 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#2563eb" />
           </View>
-        ) : addGoal.isPending || addCard.isPending ? (
+        ) : addGoal.isPending || addCard.isPending || addSubstitution.isPending ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#2563eb" />
             <Text style={styles.loadingText}>Zapisywanie...</Text>
           </View>
         ) : (
-          <ScrollView style={styles.scrollContent}>
-            <View style={styles.teamsContainer}>
-              {/* Home Team Column */}
-              <View style={styles.teamColumn}>
-                <View style={[styles.teamColumnHeader, { backgroundColor: '#3b82f6' }]}>
-                  <Text style={styles.teamColumnTitle}>Gospodarze</Text>
-                </View>
-                {!teamsData?.homeTeam?.players || teamsData.homeTeam.players.length === 0 ? (
-                  <Text style={styles.emptyText}>Brak</Text>
-                ) : (
-                  teamsData.homeTeam.players.map((player) => renderPlayer(player, 'home'))
-                )}
+          <View style={styles.twoColumnContainer}>
+            {/* Left Column - Home Team */}
+            <View style={styles.columnLeft}>
+              <View style={styles.teamHeader}>
+                <Text style={styles.teamHeaderText}>Gospodarze</Text>
               </View>
+              <ScrollView style={styles.columnScroll}>
+                {teamsData?.homeTeam?.players && teamsData.homeTeam.players.length > 0 ? (
+                  <>
+                    {/* Starters Section */}
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionHeaderText}>Podstawowy skład</Text>
+                    </View>
+                    {teamsData.homeTeam.players
+                      .filter(player => player.is_starter)
+                      .map((player) => renderPlayer(player, 'home'))}
 
-              {/* Away Team Column */}
-              <View style={styles.teamColumn}>
-                <View style={[styles.teamColumnHeader, { backgroundColor: '#ef4444' }]}>
-                  <Text style={styles.teamColumnTitle}>Goście</Text>
-                </View>
-                {!teamsData?.awayTeam?.players || teamsData.awayTeam.players.length === 0 ? (
-                  <Text style={styles.emptyText}>Brak</Text>
+                    {/* Separator */}
+                    <View style={styles.separator} />
+
+                    {/* Substitutes Section */}
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionHeaderText}>Rezerwowi</Text>
+                    </View>
+                    {teamsData.homeTeam.players
+                      .filter(player => !player.is_starter)
+                      .map((player) => renderPlayer(player, 'home'))}
+                  </>
                 ) : (
-                  teamsData.awayTeam.players.map((player) => renderPlayer(player, 'away'))
+                  <Text style={styles.emptyText}>Brak zawodników</Text>
                 )}
-              </View>
+              </ScrollView>
             </View>
-          </ScrollView>
+
+            {/* Right Column - Away Team */}
+            <View style={styles.columnRight}>
+              <View style={styles.teamHeader}>
+                <Text style={styles.teamHeaderText}>Goście</Text>
+              </View>
+              <ScrollView style={styles.columnScroll}>
+                {teamsData?.awayTeam?.players && teamsData.awayTeam.players.length > 0 ? (
+                  <>
+                    {/* Starters Section */}
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionHeaderText}>Podstawowy skład</Text>
+                    </View>
+                    {teamsData.awayTeam.players
+                      .filter(player => player.is_starter)
+                      .map((player) => renderPlayer(player, 'away'))}
+
+                    {/* Separator */}
+                    <View style={styles.separator} />
+
+                    {/* Substitutes Section */}
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionHeaderText}>Rezerwowi</Text>
+                    </View>
+                    {teamsData.awayTeam.players
+                      .filter(player => !player.is_starter)
+                      .map((player) => renderPlayer(player, 'away'))}
+                  </>
+                ) : (
+                  <Text style={styles.emptyText}>Brak zawodników</Text>
+                )}
+              </ScrollView>
+            </View>
+          </View>
         )}
 
-        {/* Action Popup - WhatsApp style */}
+        {/* Action Popup */}
         {actionPopup.visible && actionPopup.player && (
           <Modal
             transparent
@@ -395,11 +572,75 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
                   <Text style={styles.actionButtonIcon}>🔄</Text>
                   <Text style={styles.actionButtonText}>Samobój</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.actionButtonSubstitution]}
+                  onPress={() => handleAction('substitution')}
+                >
+                  <Text style={styles.actionButtonIcon}>🔁</Text>
+                  <Text style={styles.actionButtonText}>Zmiana</Text>
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           </Modal>
         )}
-      </LinearGradient>
+
+        {/* Substitution Modal */}
+        {substitutionModal.visible && substitutionModal.playerOut && (
+          <Modal
+            transparent
+            visible={substitutionModal.visible}
+            animationType="slide"
+            onRequestClose={() =>
+              setSubstitutionModal({ visible: false, playerOut: null, team: null })
+            }
+          >
+            <View style={styles.substitutionOverlay}>
+              <View style={styles.substitutionContainer}>
+                <View style={styles.substitutionHeader}>
+                  <Text style={styles.substitutionTitle}>Wybierz rezerwowego</Text>
+                  <Text style={styles.substitutionSubtitle}>
+                    Schodzi: #{substitutionModal.playerOut.jersey_number || '?'}{' '}
+                    {substitutionModal.playerOut.first_name} {substitutionModal.playerOut.last_name}
+                  </Text>
+                </View>
+
+                <ScrollView style={styles.substitutionScroll}>
+                  {teamsData && substitutionModal.team && (
+                    substitutionModal.team === 'home'
+                      ? teamsData.homeTeam?.players.filter(p => !p.is_starter)
+                      : teamsData.awayTeam?.players.filter(p => !p.is_starter)
+                  )?.map((player) => (
+                    <TouchableOpacity
+                      key={player.id}
+                      style={styles.substitutionPlayerCard}
+                      onPress={() => handleSubstitution(player.id)}
+                    >
+                      <JerseyIcon
+                        color={substitutionModal.team === 'home' ? '#3b82f6' : '#ef4444'}
+                        number={player.jersey_number?.toString() || '?'}
+                        size={32}
+                      />
+                      <Text style={styles.substitutionPlayerName}>
+                        {player.first_name} {player.last_name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={styles.substitutionCancelButton}
+                  onPress={() =>
+                    setSubstitutionModal({ visible: false, playerOut: null, team: null })
+                  }
+                >
+                  <Text style={styles.substitutionCancelText}>Anuluj</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
+      </View>
     </Modal>
   );
 }
@@ -407,12 +648,13 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    backgroundColor: '#2563eb',
     paddingTop: 50,
     paddingBottom: 12,
     paddingHorizontal: 16,
@@ -420,7 +662,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
   },
-  backButtonText: {
+  backText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
@@ -430,43 +672,39 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  scoreHeader: {
+  scoreSection: {
     backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#e0e0e0',
   },
-  teamScoreContainer: {
+  teamSection: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
-  teamLogo: {
-    width: 32,
-    height: 32,
-  },
-  teamScoreName: {
-    fontSize: 11,
+  teamName: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#333',
     textAlign: 'center',
   },
-  scoreBox: {
+  scoreboard: {
     alignItems: 'center',
     paddingHorizontal: 16,
   },
-  scoreText: {
+  score: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#2563eb',
   },
   scoreLabel: {
     fontSize: 10,
-    color: '#64748b',
-    marginTop: 2,
+    color: '#999',
+    marginTop: 4,
   },
   centerContainer: {
     flex: 1,
@@ -476,74 +714,104 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#64748b',
+    color: '#666',
   },
-  scrollContent: {
+  twoColumnContainer: {
     flex: 1,
-  },
-  teamsContainer: {
     flexDirection: 'row',
+  },
+  columnLeft: {
+    flex: 1,
+    paddingLeft: 8,
+    paddingRight: 4,
+    paddingTop: 16,
+  },
+  columnRight: {
+    flex: 1,
+    paddingLeft: 4,
+    paddingRight: 8,
+    paddingTop: 16,
+  },
+  columnScroll: {
     flex: 1,
   },
-  teamColumn: {
-    flex: 1,
-    borderRightWidth: 0.5,
-    borderRightColor: '#e2e8f0',
-  },
-  teamColumnHeader: {
-    padding: 8,
+  teamHeader: {
+    marginBottom: 12,
     alignItems: 'center',
   },
-  teamColumnTitle: {
-    color: '#fff',
-    fontSize: 12,
+  teamHeaderText: {
+    fontSize: 14,
     fontWeight: 'bold',
+    color: '#333',
+  },
+  sectionHeader: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 8,
+  },
+  sectionHeaderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+  },
+  separator: {
+    height: 3,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 12,
+    borderRadius: 2,
+  },
+  playerCard: {
+    position: 'relative',
+    backgroundColor: '#fff',
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingHorizontal: 6,
+    marginBottom: 5,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   playerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e2e8f0',
-    gap: 12,
-  },
-  jerseyNumber: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  jerseyNumberText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  playerInfo: {
-    flex: 1,
-    gap: 2,
+    alignItems: 'flex-end',
   },
   playerName: {
-    fontSize: 12,
+    flex: 1,
+    fontSize: 10,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#333',
+    marginLeft: 4,
+    lineHeight: 12,
   },
-  statsRow: {
+  statsTopRight: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
     flexDirection: 'row',
-    gap: 4,
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 2,
+    zIndex: 1,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statIcon: {
-    fontSize: 14,
+    fontSize: 11,
   },
-  ownGoalIcon: {
-    color: '#ef4444',
+  statCount: {
+    fontSize: 8,
     fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 1,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#94a3b8',
+    color: '#999',
     marginTop: 20,
     fontSize: 14,
   },
@@ -596,6 +864,9 @@ const styles = StyleSheet.create({
   actionButtonOwnGoal: {
     backgroundColor: '#8b5cf6',
   },
+  actionButtonSubstitution: {
+    backgroundColor: '#0ea5e9',
+  },
   actionButtonIcon: {
     fontSize: 24,
     marginRight: 12,
@@ -604,5 +875,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  // Substitution Modal Styles
+  substitutionOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  substitutionContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    paddingBottom: 20,
+  },
+  substitutionHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  substitutionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  substitutionSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  substitutionScroll: {
+    maxHeight: 400,
+  },
+  substitutionPlayerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  substitutionPlayerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#334155',
+    marginLeft: 12,
+  },
+  substitutionCancelButton: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  substitutionCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748b',
   },
 });

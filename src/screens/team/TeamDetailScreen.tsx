@@ -12,6 +12,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useQuery } from '@tanstack/react-query';
 import { tournamentApi } from '../../services/api';
 import { Player } from '../../types';
+import TeamLogo from '../../components/TeamLogo';
 
 type Props = StackScreenProps<RootStackParamList, 'TeamDetail'>;
 
@@ -42,10 +43,10 @@ export default function TeamDetailScreen({ route }: Props) {
     );
   }
 
-  const renderPlayer = ({ item, index }: { item: Player; index: number }) => (
+  const renderPlayer = ({ item }: { item: Player }) => (
     <View style={styles.playerCard}>
       <View style={styles.playerNumber}>
-        <Text style={styles.playerNumberText}>{index + 1}</Text>
+        <Text style={styles.playerNumberText}>{item.jersey_number || '?'}</Text>
       </View>
       <View style={styles.playerInfo}>
         <Text style={styles.playerName}>
@@ -61,6 +62,7 @@ export default function TeamDetailScreen({ route }: Props) {
 
       {/* Team Header */}
       <View style={styles.header}>
+        <TeamLogo logoUrl={team.logo_url} teamName={teamName} size={80} />
         <Text style={styles.teamName}>{teamName}</Text>
         <Text style={styles.playerCount}>
           {team.players?.length || 0} zawodników
@@ -110,12 +112,14 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
+    alignItems: 'center',
+    gap: 12,
   },
   teamName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1e293b',
-    marginBottom: 4,
+    textAlign: 'center',
   },
   playerCount: {
     fontSize: 14,

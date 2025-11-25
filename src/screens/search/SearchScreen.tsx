@@ -14,6 +14,59 @@ import { useQuery } from '@tanstack/react-query';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { tournamentApi } from '../../services/api';
 import { Tournament } from '../../types';
+import Svg, { Path, Circle, Ellipse } from 'react-native-svg';
+
+// Professional Referee Jersey Icon with Vertical Stripes
+const RefereeJerseyIcon = ({ size = 32 }: { size?: number }) => {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48">
+      {/* Left sleeve - angular/square style */}
+      <Path
+        d="M 10 12 L 4 12 L 4 22 L 10 22 L 12 18 L 12 12 Z"
+        fill="#FFFFFF"
+        stroke="#000000"
+        strokeWidth="1.2"
+        strokeLinejoin="miter"
+      />
+
+      {/* Right sleeve - angular/square style */}
+      <Path
+        d="M 38 12 L 44 12 L 44 22 L 38 22 L 36 18 L 36 12 Z"
+        fill="#FFFFFF"
+        stroke="#000000"
+        strokeWidth="1.2"
+        strokeLinejoin="miter"
+      />
+
+      {/* Main jersey body */}
+      <Path
+        d="M 12 12 L 12 40 C 12 42 13 44 15 44 L 33 44 C 35 44 36 42 36 40 L 36 12 Z"
+        fill="#FFFFFF"
+        stroke="#000000"
+        strokeWidth="1.5"
+        strokeLinejoin="miter"
+      />
+
+      {/* Black vertical stripes - 7 stripes for classic referee look */}
+      <Path d="M 15 12 L 15 44" stroke="#000000" strokeWidth="2.5" strokeLinecap="butt" />
+      <Path d="M 19 12 L 19 44" stroke="#000000" strokeWidth="2.5" strokeLinecap="butt" />
+      <Path d="M 24 12 L 24 44" stroke="#000000" strokeWidth="2.5" strokeLinecap="butt" />
+      <Path d="M 29 12 L 29 44" stroke="#000000" strokeWidth="2.5" strokeLinecap="butt" />
+      <Path d="M 33 12 L 33 44" stroke="#000000" strokeWidth="2.5" strokeLinecap="butt" />
+
+      {/* Collar - V-neck style */}
+      <Path
+        d="M 18 12 L 24 16 L 30 12"
+        fill="none"
+        stroke="#000000"
+        strokeWidth="1.2"
+      />
+
+      {/* Collar fill */}
+      <Circle cx="24" cy="12" r="3" fill="#FFFFFF" stroke="#000000" strokeWidth="1" />
+    </Svg>
+  );
+};
 
 type SearchScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Search'>;
 
@@ -48,7 +101,6 @@ export default function SearchScreen() {
       )}
       <View style={styles.cardFooter}>
         <Text style={styles.format}>{getFormatText(item.format)}</Text>
-        <Text style={styles.shareCode}>Kod: {item.share_code}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -65,7 +117,7 @@ export default function SearchScreen() {
   if (!tournaments || tournaments.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>Brak publicznych turniejów</Text>
+        <Text style={styles.emptyText}>Brak dostępnych turniejów</Text>
         <Text style={styles.emptySubtext}>Sprawdź ponownie później</Text>
       </View>
     );
@@ -82,6 +134,13 @@ export default function SearchScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
         }
       />
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('RefereeDashboard')}
+      >
+        <RefereeJerseyIcon size={32} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -206,4 +265,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
   },
+  // FAB styles
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    backgroundColor: '#FFFFFF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
+  fabIcon: { fontSize: 28, color: '#fff' },
 });

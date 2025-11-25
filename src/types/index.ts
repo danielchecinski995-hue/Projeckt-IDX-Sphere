@@ -93,6 +93,24 @@ export interface Player {
   first_name: string;
   last_name: string;
   jersey_number?: number;
+  is_starter?: boolean;
+}
+
+// Substitution types
+export interface Substitution {
+  id: string;
+  match_id: string;
+  team_id: string;
+  player_out_id: string;
+  player_in_id: string;
+  minute?: number;
+  created_at: string;
+  player_out_first_name?: string;
+  player_out_last_name?: string;
+  player_out_jersey_number?: number;
+  player_in_first_name?: string;
+  player_in_last_name?: string;
+  player_in_jersey_number?: number;
 }
 
 // Match card types
