@@ -50,11 +50,13 @@ export default function TournamentDetailScreen() {
   const { data: matches, isLoading: matchesLoading } = useQuery({
     queryKey: ['matches', tournamentId],
     queryFn: () => tournamentApi.getTournamentMatches(tournamentId),
+    refetchInterval: 5000, // Auto-refresh every 5 seconds for live scores
   });
 
   const { data: standings, isLoading: standingsLoading } = useQuery({
     queryKey: ['standings', tournamentId],
     queryFn: () => tournamentApi.getTournamentStandings(tournamentId),
+    refetchInterval: 5000, // Auto-refresh standings
   });
 
   const { data: teams, isLoading: teamsLoading } = useQuery({
