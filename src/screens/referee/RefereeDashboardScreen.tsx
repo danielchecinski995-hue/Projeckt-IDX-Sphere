@@ -34,6 +34,7 @@ export default function RefereeDashboardScreen() {
     const { data: tournaments, isLoading: tournamentsLoading } = useQuery({
         queryKey: ['allTournaments'],
         queryFn: async () => tournamentApi.getAllTournaments(),
+        refetchInterval: 5000, // Auto-refresh tournament list
     });
 
     // Pobierz mecze dla wybranego turnieju
@@ -44,6 +45,7 @@ export default function RefereeDashboardScreen() {
             return tournamentApi.getTournamentMatches(selectedTournament.id);
         },
         enabled: !!selectedTournament,
+        refetchInterval: 5000, // Auto-refresh match scores
     });
 
     // Kliknięcie na mecz - otwórz tryb sędziowski
