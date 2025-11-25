@@ -573,13 +573,16 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
                   <Text style={styles.actionButtonText}>Samobój</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.actionButtonSubstitution]}
-                  onPress={() => handleAction('substitution')}
-                >
-                  <Text style={styles.actionButtonIcon}>🔁</Text>
-                  <Text style={styles.actionButtonText}>Zmiana</Text>
-                </TouchableOpacity>
+                {/* Zmiana - tylko dla zawodników z podstawowego składu */}
+                {actionPopup.player?.is_starter && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.actionButtonSubstitution]}
+                    onPress={() => handleAction('substitution')}
+                  >
+                    <Text style={styles.actionButtonIcon}>🔁</Text>
+                    <Text style={styles.actionButtonText}>Zmiana</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </TouchableOpacity>
           </Modal>
