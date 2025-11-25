@@ -418,24 +418,6 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
           <View style={{ width: 60 }} />
         </View>
 
-        {/* Score Header */}
-        <View style={styles.scoreSection}>
-          <View style={styles.teamSection}>
-            <TeamLogo logoUrl={matchData.homeTeamLogo} teamName={matchData.homeTeamName} size={40} />
-            <Text style={styles.teamName}>{matchData.homeTeamName}</Text>
-          </View>
-          <View style={styles.scoreboard}>
-            <Text style={styles.score}>
-              {matchData.homeScore ?? 0} : {matchData.awayScore ?? 0}
-            </Text>
-            <Text style={styles.scoreLabel}>Aktualny wynik</Text>
-          </View>
-          <View style={styles.teamSection}>
-            <TeamLogo logoUrl={matchData.awayTeamLogo} teamName={matchData.awayTeamName} size={40} />
-            <Text style={styles.teamName}>{matchData.awayTeamName}</Text>
-          </View>
-        </View>
-
         {/* Content */}
         {teamsLoading ? (
           <View style={styles.centerContainer}>
@@ -447,13 +429,31 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
             <Text style={styles.loadingText}>Zapisywanie...</Text>
           </View>
         ) : (
-          <View style={styles.twoColumnContainer}>
-            {/* Left Column - Home Team */}
-            <View style={styles.columnLeft}>
-              <View style={styles.teamHeader}>
-                <Text style={styles.teamHeaderText}>Gospodarze</Text>
+          <ScrollView style={styles.mainScroll}>
+            {/* Score Header */}
+            <View style={styles.scoreSection}>
+              <View style={styles.teamSection}>
+                <TeamLogo logoUrl={matchData.homeTeamLogo} teamName={matchData.homeTeamName} size={40} />
+                <Text style={styles.teamName}>{matchData.homeTeamName}</Text>
               </View>
-              <ScrollView style={styles.columnScroll}>
+              <View style={styles.scoreboard}>
+                <Text style={styles.score}>
+                  {matchData.homeScore ?? 0} : {matchData.awayScore ?? 0}
+                </Text>
+                <Text style={styles.scoreLabel}>Aktualny wynik</Text>
+              </View>
+              <View style={styles.teamSection}>
+                <TeamLogo logoUrl={matchData.awayTeamLogo} teamName={matchData.awayTeamName} size={40} />
+                <Text style={styles.teamName}>{matchData.awayTeamName}</Text>
+              </View>
+            </View>
+
+            <View style={styles.twoColumnContainer}>
+              {/* Left Column - Home Team */}
+              <View style={styles.columnLeft}>
+                <View style={styles.teamHeader}>
+                  <Text style={styles.teamHeaderText}>Gospodarze</Text>
+                </View>
                 {teamsData?.homeTeam?.players && teamsData.homeTeam.players.length > 0 ? (
                   <>
                     {/* Starters Section */}
@@ -478,15 +478,13 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
                 ) : (
                   <Text style={styles.emptyText}>Brak zawodników</Text>
                 )}
-              </ScrollView>
-            </View>
-
-            {/* Right Column - Away Team */}
-            <View style={styles.columnRight}>
-              <View style={styles.teamHeader}>
-                <Text style={styles.teamHeaderText}>Goście</Text>
               </View>
-              <ScrollView style={styles.columnScroll}>
+
+              {/* Right Column - Away Team */}
+              <View style={styles.columnRight}>
+                <View style={styles.teamHeader}>
+                  <Text style={styles.teamHeaderText}>Goście</Text>
+                </View>
                 {teamsData?.awayTeam?.players && teamsData.awayTeam.players.length > 0 ? (
                   <>
                     {/* Starters Section */}
@@ -511,9 +509,9 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
                 ) : (
                   <Text style={styles.emptyText}>Brak zawodników</Text>
                 )}
-              </ScrollView>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         )}
 
         {/* Action Popup */}
@@ -719,9 +717,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  twoColumnContainer: {
+  mainScroll: {
     flex: 1,
+  },
+  twoColumnContainer: {
     flexDirection: 'row',
+    paddingBottom: 20,
   },
   columnLeft: {
     flex: 1,
@@ -734,9 +735,6 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     paddingRight: 8,
     paddingTop: 16,
-  },
-  columnScroll: {
-    flex: 1,
   },
   teamHeader: {
     marginBottom: 12,
