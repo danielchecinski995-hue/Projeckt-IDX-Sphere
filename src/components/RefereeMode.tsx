@@ -207,6 +207,8 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     queryKey: ['match-teams', match.id],
     queryFn: () => matchApi.getMatchTeams(match.id),
     enabled: visible,
+    refetchOnMount: 'always', // Always fetch fresh data
+    staleTime: 0, // Consider data immediately stale
   });
 
   // Load goal scorers
