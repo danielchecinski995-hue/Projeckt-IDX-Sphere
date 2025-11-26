@@ -4,9 +4,15 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "start:tunnel": "expo start --tunnel",
+    "start:clear": "expo start --clear",
     "android": "expo run:android",
+    "android:device": "expo run:android --device",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:android": "cd android && ./gradlew assembleDebug",
+    "clean": "cd android && ./gradlew clean",
+    "clean:all": "rm -rf node_modules && npm install && cd android && ./gradlew clean"
   },
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.8.2",
@@ -15,6 +21,7 @@
     "@tanstack/react-query": "^5.90.7",
     "axios": "^1.13.2",
     "expo": "~54.0.22",
+    "expo-dev-client": "~6.0.18",
     "expo-image": "~3.0.10",
     "expo-linear-gradient": "^15.0.7",
     "expo-status-bar": "~3.0.8",

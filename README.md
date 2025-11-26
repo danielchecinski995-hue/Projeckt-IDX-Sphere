@@ -57,7 +57,41 @@ src/
 
 ## 📱 Jak uruchomić
 
-### Krok 1: Uruchom backend API
+### 🌐 Uruchomienie w Project IDX (zalecane)
+
+Project IDX to środowisko deweloperskie w chmurze od Google, które eliminuje problemy z konfiguracją lokalną.
+
+#### Jak otworzyć projekt w IDX:
+1. Zaloguj się na [idx.google.com](https://idx.google.com)
+2. Kliknij **Import a Repo** lub **Open existing workspace**
+3. Wklej URL do repozytorium GitHub lub otwórz istniejący workspace
+4. IDX automatycznie:
+   - Zainstaluje wszystkie zależności (Node.js, Android SDK, JDK)
+   - Uruchomi `npm install`
+   - Uruchomi Expo z tunelem
+5. Zeskanuj kod QR w Expo Go lub użyj podglądu Web
+
+#### Dostępne komendy w IDX:
+```bash
+npm start:tunnel     # Uruchom Expo z tunelem (dla zdalnego dostępu)
+npm run web         # Podgląd w przeglądarce (wbudowany w IDX)
+npm run android     # Build Android (używa emulatora IDX)
+npm run build:android  # Zbuduj APK
+```
+
+#### Zalety Project IDX:
+- ✅ Nie wymaga instalacji Android Studio lokalnie
+- ✅ Wbudowany emulator Android
+- ✅ Automatyczna konfiguracja środowiska
+- ✅ Dostęp z dowolnego urządzenia przez przeglądarkę
+- ✅ Współpraca zespołowa w czasie rzeczywistym
+- ✅ Darmowy dla projektów open source
+
+---
+
+### 💻 Uruchomienie lokalne (Windows/Mac/Linux)
+
+#### Krok 1: Uruchom backend API
 Upewnij się, że backend jest uruchomiony na http://localhost:3000
 
 ```bash
