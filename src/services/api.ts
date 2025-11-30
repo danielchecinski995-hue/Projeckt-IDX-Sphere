@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { Tournament, Match, Standing, Team, TeamWithPlayers, MatchStatistics, Substitution } from '../types';
+import { API_BASE_URL } from '../config';
 
-// API base URL - using local network IP for Expo Go
-// When using Expo Go, phone must be on same WiFi as computer
-const API_URL = 'http://192.168.1.78:3000/api';
+// API base URL - automatically switches between dev (local IP) and production
+const API_URL = API_BASE_URL;
 
 // Create axios instance with timeout for localtunnel
 const api = axios.create({
