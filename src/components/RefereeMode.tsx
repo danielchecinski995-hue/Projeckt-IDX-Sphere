@@ -190,6 +190,25 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
     playerOut: null,
     team: null,
   });
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Timer effect
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (match.status === 'live') {
+      interval = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [match.status]);
+
+  // Format time (MM:SS)
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Load current match data to get updated scores
   const { data: currentMatch } = useQuery({
@@ -289,6 +308,36 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
       console.error('Error adding substitution:', error);
     },
   });
+
+  // Mutation to update status
+  const updateStatus = useMutation({
+    mutationFn: ({ status }: { status: 'scheduled' | 'live' | 'completed' }) =>
+      matchApi.updateMatchStatus(match.id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['match', match.id] });
+      if (match.tournamentId) {
+        queryClient.invalidateQueries({ queryKey: ['matches', match.tournamentId] });
+      }
+    },
+    onError: (error) => {
+      Alert.alert('Błąd', 'Nie udało się zmienić statusu');
+      console.error('Error updating status:', error);
+    },
+  });
+
+  const handleStatusChange = (newStatus: 'scheduled' | 'live' | 'completed') => {
+    Alert.alert(
+      'Zmiana statusu',
+      `Czy na pewno chcesz zmienić status na: ${newStatus === 'live' ? 'W TRAKCIE' : 'ZAKOŃCZONY'}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Zmień',
+          onPress: () => updateStatus.mutate({ status: newStatus }),
+        },
+      ]
+    );
+  };
 
   const handlePlayerPress = (player: Player, team: 'home' | 'away') => {
     setActionPopup({
@@ -448,6 +497,40 @@ export default function RefereeMode({ visible, onClose, match }: ReferenceModePr
                 <TeamLogo logoUrl={matchData.awayTeamLogo} teamName={matchData.awayTeamName} size={40} />
                 <Text style={styles.teamName}>{matchData.awayTeamName}</Text>
               </View>
+            </View>
+
+            <View style={styles.controlSection}>
+              {matchData.status === 'scheduled' && (
+                <TouchableOpacity
+                  style={[styles.controlButton, styles.startButton]}
+                  onPress={() => handleStatusChange('live')}
+                  disabled={updateStatus.isPending}
+                >
+                  <Text style={styles.controlButtonText}>▶ Rozpocznij Mecz</Text>
+                </TouchableOpacity>
+              )}
+
+              {matchData.status === 'live' && (
+                <View style={styles.liveControlContainer}>
+                  <View style={styles.timerContainer}>
+                    <Text style={styles.timerText}>{formatTime(elapsedTime)}</Text>
+                    <Text style={styles.liveIndicator}>• LIVE</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.controlButton, styles.endButton]}
+                    onPress={() => handleStatusChange('completed')}
+                    disabled={updateStatus.isPending}
+                  >
+                    <Text style={styles.controlButtonText}>■ Zakończ Mecz</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {matchData.status === 'completed' && (
+                <View style={styles.completedContainer}>
+                  <Text style={styles.completedText}>Mecz Zakończony</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.twoColumnContainer}>
@@ -708,6 +791,69 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#999',
     marginTop: 4,
+  },
+  controlSection: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  controlButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 200,
+  },
+  startButton: {
+    backgroundColor: '#10b981',
+  },
+  endButton: {
+    backgroundColor: '#ef4444',
+  },
+  controlButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  liveControlContainer: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+  },
+  timerText: {
+    color: '#fff',
+    fontFamily: 'monospace',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  liveIndicator: {
+    color: '#ef4444',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  completedContainer: {
+    padding: 12,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  completedText: {
+    color: '#64748b',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   centerContainer: {
     flex: 1,
